@@ -271,6 +271,113 @@ A matching intervention with two test steps (an information step and a question 
 This ensures you can test the complete API flow without having to manually create records or guess at the right values.
 ```
 
+## Testing with Swagger UI: Step-by-Step Guide
+
+If you prefer a more guided approach to testing the API, follow these steps:
+
+### 1. Get a Valid Intervention and Interaction
+
+First, you need to get an active intervention and interaction for a user:
+
+1. In Swagger UI, locate and execute the `GET /api/users/{userId}/interventions/today` endpoint
+   - Use one of your existing user IDs (e.g., `1a46c026-361c-4c12-9b6a-8903447faf32`)
+   - This will return an intervention with the structure and a newly created interaction ID
+
+2. From the response, note down:
+   - The `interactionId` (e.g., `1f514659-5cfb-4769-8df5-4a35809470ab`)
+   - Look at the `intervention.exercises[0].steps` array to find a valid step ID
+
+### 2. Choose a Step to Respond To
+
+Look at the returned intervention data and choose a step to respond to:
+
+1. Find a specific step in the response, like:
+
+```json
+"steps": [
+  {
+    "id": "a6fc5132-9276-40b9-af7f-5dd92e1ed215",
+    "type": "INFORMATION",
+    "content": {
+      "title": "Introduction to Deep Breathing",
+      "content": "Deep breathing is...",
+      "acknowledgmentRequired": true
+    },
+    "orderIndex": 0
+  }
+]
+
+Note down the step.id (e.g., a6fc5132-9276-40b9-af7f-5dd92e1ed215)
+Note the step.type as well (e.g., INFORMATION) - this will determine what kind of response you need to send
+
+3. Prepare the Correct Response Format
+Create a response that matches the step type:
+
+For an "INFORMATION" step:
+
+json{
+  "response": {
+    "acknowledged": true
+  }
+}
+
+For a "QUESTION_SINGLE_CHOICE" step:
+
+json{
+  "response": {
+    "selectedOptionId": "opt-1"  // Use an option ID from the step's options array
+  }
+}
+
+For a "TEXT_REFLECTION" step:
+
+json{
+  "response": {
+    "reflections": [
+      {
+        "promptId": "prompt-1",  // Use a prompt ID from the step's prompts array
+        "text": "My reflection response"
+      }
+    ]
+  }
+}
+4. Execute the API Call
+Now use Swagger UI to test the endpoint:
+
+Locate and click on the POST /api/interactions/{interactionId}/steps/{stepId}/response endpoint
+Click "Try it out"
+Enter the interactionId you noted earlier
+Enter the stepId you selected
+In the Request body, enter your prepared JSON response
+Click "Execute"
+
+Example Workflow
+Here's a complete example:
+
+GET intervention:
+
+Call GET /api/users/1a46c026-361c-4c12-9b6a-8903447faf32/interventions/today
+From response: interactionId is 1f514659-5cfb-4769-8df5-4a35809470ab
+From response: a step has id 85e7249b-709d-43af-89fa-e871b80b3978 and type QUESTION_SINGLE_CHOICE
+
+
+Prepare response:
+
+Step is a question with options, so response should be:
+
+
+
+json{
+  "response": {
+    "selectedOptionId": "opt-3"
+  }
+}
+
+POST response:
+
+Call POST /api/interactions/1f514659-5cfb-4769-8df5-4a35809470ab/steps/85e7249b-709d-43af-89fa-e871b80b3978/response
+With the JSON body above
+
 ### Using Prisma Studio
 To explore the database directly:
 ```bash
