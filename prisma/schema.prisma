@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String              @id @default(uuid())
+  email             String              @unique
+  name              String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  dailyData         DailyData[]
+  userInteractions  UserInteraction[]
+  language          String              @default("en")
+
+  @@map("users")
+}
+
+model DailyData {
+  id              String   @id @default(uuid())
+  userId          String
+  date            DateTime @default(now())
+  stressLevel     Float?
+  sleepHours      Float?
+  activitySteps   Int?
+  activityMinutes Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@map("daily_data")
+}
+
+model Intervention {
+  id                String              @id @default(uuid())
+  name              String
+  description       String?
+  condition         String?             // JSON string for conditions when this intervention should be triggered
+  priority          Int                 @default(0) // (higher numbers = higher priority)
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  exercises         Exercise[]
+  userInteractions  UserInteraction[]
+  translations      LocalizedContent[]  // For localization
+
+  @@map("interventions")
+}
+
+model Exercise {
+  id                String              @id @default(uuid())
+  interventionId    String
+  name              String
+  description       String?
+  orderIndex        Int                 @default(0) // For ordering exercises in an intervention
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  intervention      Intervention        @relation(fields: [interventionId], references: [id])
+  steps             Step[]
+  translations      LocalizedContent[]  // For localization
+
+  @@map("exercises")
+}
+
+// Step model (part of an exercise)
+model Step {
+  id                String              @id @default(uuid())
+  exerciseId        String
+  type              String              // Type of step (e.g., question, reflection, info)
+  content           Json                // Dynamic content based on type
+  orderIndex        Int                 @default(0) // For ordering steps in an exercise
+  nextStepRules     Json?               // Rules for conditional branching (null if linear)
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  exercise          Exercise            @relation(fields: [exerciseId], references: [id])
+  translations      LocalizedContent[]  // For localization
+  stepResponses     StepResponse[]
+
+  @@map("steps")
+}
+
+model LocalizedContent {
+  id              String        @id @default(uuid())
+  entityType      String        // Type of entity (intervention, exercise, step)
+  entityId        String
+  language        String        // Language code (e.g., en, es, de)
+  content         Json
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  // Relations
+  intervention    Intervention? @relation(fields: [interventionId], references: [id])
+  interventionId  String?
+  exercise        Exercise?     @relation(fields: [exerciseId], references: [id])
+  exerciseId      String?
+  step            Step?         @relation(fields: [stepId], references: [id])
+  stepId          String?
+
+  @@unique([entityType, entityId, language])
+  @@map("localized_content")
+}
+
+// User interaction with interventions/exercises
+model UserInteraction {
+  id              String        @id @default(uuid())
+  userId          String
+  interventionId  String
+  date            DateTime      @default(now())
+  completed       Boolean       @default(false)
+  startedAt       DateTime      @default(now())
+  completedAt     DateTime?
+  responses       StepResponse[]
+  user            User          @relation(fields: [userId], references: [id])
+  intervention    Intervention  @relation(fields: [interventionId], references: [id])
+
+  @@map("user_interactions")
+}
+
+// User responses to specific steps
+model StepResponse {
+  id                  String          @id @default(uuid())
+  userInteractionId   String
+  stepId              String
+  response            Json            // Content of response (format depends on step type)
+  createdAt           DateTime        @default(now())
+  userInteraction     UserInteraction @relation(fields: [userInteractionId], references: [id])
+  step                Step            @relation(fields: [stepId], references: [id])
+
+  @@map("step_responses")
+}
