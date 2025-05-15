@@ -269,6 +269,7 @@ Daily data with metrics that will trigger an intervention (high stress, low slee
 A matching intervention with two test steps (an information step and a question step)
 
 This ensures you can test the complete API flow without having to manually create records or guess at the right values.
+```
 
 ### Using Prisma Studio
 To explore the database directly:
